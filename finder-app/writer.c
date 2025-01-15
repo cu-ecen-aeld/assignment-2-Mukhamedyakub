@@ -1,47 +1,33 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <syslog.h>
-#include <string.h>
-#include <errno.h>
 
-int main(int argc, char *argv[]) {
-    // Open syslog
-    openlog("writer", LOG_PID | LOG_CONS, LOG_USER);
+int main(int argc, char* argv[])
+{
+  openlog("Writer", LOG_PID, LOG_USER);
 
-    // Validate input arguments
-    if (argc != 3) {
-        syslog(LOG_ERR, "Invalid number of arguments: expected 2, got %d", argc - 1);
-        printf("Usage: %s <file-path> <string>\n", argv[0]);
-        closelog();
-        return 1;
+  if (argc != 3) {
+    printf("There are expected 2 arguments: a file and a string\n");
+    syslog(LOG_PERROR, "There are expected 2 arguments: a file and a string\n");
+    return 1;
+  };
+
+  int return_code = 0;
+  FILE *fp = fopen(argv[1], "wt");
+  if (fp != NULL)
+    {
+        fputs(argv[2], fp);
+        fclose(fp);
+        syslog(LOG_DEBUG, "Writing %s to %s", argv[2], argv[1]);
+        printf("Writing %s to %s\n", argv[2], argv[1]);
+        return_code = 0;
     }
-
-    const char *file_path = argv[1];
-    const char *string_to_write = argv[2];
-
-    // Open the file
-    FILE *file = fopen(file_path, "w");
-    if (!file) {
-        syslog(LOG_ERR, "Error opening file %s: %s", file_path, strerror(errno));
-        perror("Error");
-        closelog();
-        return 1;
+  else
+    {
+      printf("File open error (%s)\n", argv[1]);
+      syslog(LOG_PERROR, "File open error (%s)", argv[1]);
+      return_code = 1;
     }
-
-    // Write the string to the file
-    if (fprintf(file, "%s", string_to_write) < 0) {
-        syslog(LOG_ERR, "Error writing to file %s: %s", file_path, strerror(errno));
-        fclose(file);
-        closelog();
-        return 1;
-    }
-
-    // Log success
-    syslog(LOG_DEBUG, "Writing \"%s\" to %s", string_to_write, file_path);
-
-    // Clean up
-    fclose(file);
-    closelog();
-
-    return 0;
+  
+  closelog();
+  return return_code;
 }
